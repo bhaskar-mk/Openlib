@@ -75,6 +75,7 @@ final selectedSortState = StateProvider<String>((ref) => "Most Relevant");
 final selectedFileTypeState = StateProvider<String>((ref) => "All");
 final searchQueryProvider = StateProvider<String>((ref) => "");
 final enableFiltersState = StateProvider<bool>((ref) => true);
+final annasArchiveMirrorProvider = StateProvider<String>((ref) => "Auto");
 
 // Web/Download States
 final cookieProvider = StateProvider<String>((ref) => "");
@@ -177,7 +178,12 @@ final searchProvider = FutureProvider.family
     .autoDispose<List<BookData>, String>((ref, searchQuery) async {
   if (searchQuery.isEmpty) return []; // Return empty list if search query is empty
 
-  final AnnasArchieve annasArchieve = AnnasArchieve();
+  final selectedMirror = ref.watch(annasArchiveMirrorProvider);
+  final AnnasArchieve annasArchieve = AnnasArchieve(
+    baseUrl: (selectedMirror.isNotEmpty && selectedMirror != "Auto")
+        ? selectedMirror
+        : null,
+  );
   List<BookData> data = await annasArchieve.searchBooks(
       searchQuery: searchQuery,
       content: ref.watch(getTypeValue),
@@ -190,7 +196,12 @@ final searchProvider = FutureProvider.family
 // Provider for Book Info Details
 final bookInfoProvider =
     FutureProvider.family<BookInfoData, String>((ref, url) async {
-  final AnnasArchieve annasArchieve = AnnasArchieve();
+  final selectedMirror = ref.watch(annasArchiveMirrorProvider);
+  final AnnasArchieve annasArchieve = AnnasArchieve(
+    baseUrl: (selectedMirror.isNotEmpty && selectedMirror != "Auto")
+        ? selectedMirror
+        : null,
+  );
   BookInfoData data = await annasArchieve.bookInfo(url: url);
   return data;
 });

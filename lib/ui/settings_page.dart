@@ -17,11 +17,13 @@ import 'package:openlib/services/database.dart';
 import 'package:openlib/ui/about_page.dart';
 import 'package:openlib/ui/components/page_title_widget.dart';
 
+import 'package:openlib/services/annas_archieve.dart' show AnnasArchieve;
 import 'package:openlib/state/state.dart'
     show
         themeModeProvider,
         openPdfWithExternalAppProvider,
-        openEpubWithExternalAppProvider;
+        openEpubWithExternalAppProvider,
+        annasArchiveMirrorProvider;
 
 Future<void> requestStoragePermission() async {
   bool permissionGranted = false;
@@ -166,6 +168,42 @@ class SettingsPage extends ConsumerWidget {
                   Icon(Icons.folder),
                 ]),
             _PaddedContainer(
+              onClick: () => _showMirrorDialog(context, ref),
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Anna's Archive Mirror",
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.tertiary,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      ref.watch(annasArchiveMirrorProvider) == "Auto"
+                          ? "Auto (Recommended)"
+                          : ref.watch(annasArchiveMirrorProvider),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .tertiary
+                            .withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+                Icon(
+                  Icons.dns_outlined,
+                  color: Theme.of(context).colorScheme.tertiary,
+                ),
+              ],
+            ),
+            _PaddedContainer(
               onClick: () {
                 Navigator.push(context,
                     MaterialPageRoute(builder: (BuildContext context) {
@@ -188,6 +226,97 @@ class SettingsPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+Future<void> _showMirrorDialog(BuildContext context, WidgetRef ref) async {
+  final currentMirror = ref.read(annasArchiveMirrorProvider);
+  final List<String> presetOptions = [
+    "Auto",
+    ...AnnasArchieve.defaultMirrors,
+  ];
+
+  await showDialog(
+    context: context,
+    builder: (BuildContext dialogContext) {
+      return SimpleDialog(
+        title: const Text("Select Mirror"),
+        children: [
+          ...presetOptions.map((option) {
+            final isAuto = option == "Auto";
+            final label = isAuto ? "Auto (Recommended)" : option;
+            return RadioListTile<String>(
+              title: Text(
+                label,
+                style: const TextStyle(fontSize: 14),
+              ),
+              value: option,
+              groupValue: presetOptions.contains(currentMirror)
+                  ? currentMirror
+                  : "Custom",
+              onChanged: (val) {
+                if (val != null) {
+                  ref.read(annasArchiveMirrorProvider.notifier).state = val;
+                  MyLibraryDb.instance
+                      .savePreference('annasArchiveMirror', val);
+                  Navigator.pop(dialogContext);
+                }
+              },
+            );
+          }),
+          ListTile(
+            leading: const Icon(Icons.edit),
+            title: const Text("Custom Mirror URL..."),
+            subtitle: !presetOptions.contains(currentMirror)
+                ? Text(currentMirror, style: const TextStyle(fontSize: 12))
+                : null,
+            onTap: () async {
+              Navigator.pop(dialogContext);
+              final controller = TextEditingController(
+                text: !presetOptions.contains(currentMirror)
+                    ? currentMirror
+                    : "https://",
+              );
+              await showDialog(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: const Text("Custom Mirror"),
+                    content: TextField(
+                      controller: controller,
+                      decoration: const InputDecoration(
+                        hintText: "https://annas-archive.gd",
+                        labelText: "Mirror URL",
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text("Cancel"),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          final input = controller.text.trim();
+                          if (input.isNotEmpty) {
+                            ref
+                                .read(annasArchiveMirrorProvider.notifier)
+                                .state = input;
+                            MyLibraryDb.instance
+                                .savePreference('annasArchiveMirror', input);
+                          }
+                          Navigator.pop(context);
+                        },
+                        child: const Text("Save"),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
+        ],
+      );
+    },
+  );
 }
 
 class _PaddedContainer extends StatelessWidget {

@@ -28,7 +28,8 @@ import 'package:openlib/state/state.dart'
         openPdfWithExternalAppProvider,
         openEpubWithExternalAppProvider,
         userAgentProvider,
-        cookieProvider;
+        cookieProvider,
+        annasArchiveMirrorProvider;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +53,15 @@ void main() async {
           ? false
           : true;
 
+  String annasArchiveMirror = "Auto";
+  try {
+    final dynamic mirrorPref =
+        await dataBase.getPreference('annasArchiveMirror');
+    if (mirrorPref != null && mirrorPref.toString().isNotEmpty) {
+      annasArchiveMirror = mirrorPref.toString();
+    }
+  } catch (_) {}
+
   String browserUserAgent = await dataBase.getBrowserOptions('userAgent');
   String browserCookie = await dataBase.getBrowserOptions('cookie');
 
@@ -73,6 +83,8 @@ void main() async {
             .overrideWith((ref) => openEpubwithExternalapp),
         userAgentProvider.overrideWith((ref) => browserUserAgent),
         cookieProvider.overrideWith((ref) => browserCookie),
+        annasArchiveMirrorProvider
+            .overrideWith((ref) => annasArchiveMirror),
       ],
       child: const MyApp(),
     ),
